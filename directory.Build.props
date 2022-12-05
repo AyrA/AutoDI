@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<Product>AutoDI</Product>
+		<Product>AyrA.AutoDI</Product>
 		<Authors>Kevin Gut</Authors>
 		<Copyright>Copyright © 2022 Kevin Gut</Copyright>
 		<Version>1.0.0</Version>

@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace AutoDI
+namespace AyrA.AutoDI
 {
     /// <summary>
     /// Provides extension methods to set up automated dependency injection

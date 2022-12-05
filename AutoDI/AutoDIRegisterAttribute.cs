@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AutoDI
+namespace AyrA.AutoDI
 {
     /// <summary>
     /// Registers a type for automatic dependency injection

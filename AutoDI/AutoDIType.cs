@@ -1,4 +1,4 @@
-﻿namespace AutoDI
+﻿namespace AyrA.AutoDI
 {
     /// <summary>
     /// Sets the type of automatic DI registration that is performed
