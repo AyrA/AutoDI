@@ -44,20 +44,22 @@ This can be used to assert that there are no "None" types in a release build for
 
 ## Setting up a type for automatic registration
 
-Simply add the attribute below to the class you want to automatically register:
+Simply add the `AutoDIRegisterAttribute` as shown below to the classes you want to automatically register:
 
 ```C#
-[AutoRegister(RegistrationType.None)]
+[AutoDIRegister(RegistrationType.Transient)]
 class Something {/*...*/}
 ```
 
-Replace `RegistrationType.None` with the appropriate type:
+Replace `RegistrationType.Transient` with the appropriate type:
 
 - Transient
 - Singleton
 - Scoped
+- None
 
 The values correspond to the appropriate function you would use to manually register types in your project startup routine.
+"None" is special and essentially behaves as if the attribute was not there at all.
 
 ### Interfaces
 
@@ -66,8 +68,8 @@ but rather an interface it implements.
 To achieve this, you can add the interface type to the attribute declaration:
 
 ```C#
-[AutoRegister(RegistrationType.None, typeof(ISomething))]
-class Something {/*...*/}
+[AutoDIRegister(RegistrationType.Transient, typeof(ISomething))]
+class Something : ISomething {/*...*/}
 ```
 
 Note: AutoDI doesn't checks if the type actually implements the specified interface.
