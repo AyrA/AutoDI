@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System;
+using System.Diagnostics;
 
 namespace AutoDI
 {
@@ -29,7 +30,7 @@ namespace AutoDI
 
         /// <summary>
         /// Scans the calling assembly for all types and injects those marked with
-        /// <see cref="AutoDIAttribute"/>
+        /// <see cref="AutoDIRegisterAttribute"/>
         /// </summary>
         /// <param name="collection">Service collection</param>
         /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
@@ -44,7 +45,7 @@ namespace AutoDI
 
         /// <summary>
         /// Scans the specified assembly for all types and injects those marked with
-        /// <see cref="AutoDIAttribute"/>
+        /// <see cref="AutoDIRegisterAttribute"/>
         /// </summary>
         /// <param name="assembly">Assembly to scan for types</param>
         /// <param name="collection">Service collection</param>
@@ -55,14 +56,23 @@ namespace AutoDI
         /// </exception>
         public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
         {
+            Debug.Print($"AutoDI: Scanning {assembly.FullName} for AutoDI types");
             foreach (var t in assembly.GetTypes())
             {
                 if (t.IsClass)
                 {
-                    if (t.GetCustomAttribute<AutoDIAttribute>() != null)
+                    if (t.GetCustomAttribute<AutoDIRegisterAttribute>() != null)
                     {
                         collection.AutoRegister(t, throwOnNoneType);
                     }
+                    else
+                    {
+                        Debug.Print($"AutoDI: Skipping {t}: Has no {nameof(AutoDIRegisterAttribute)}");
+                    }
+                }
+                else
+                {
+                    Debug.Print($"AutoDI: Skipping {t}: Not a class");
                 }
             }
             return collection;
@@ -77,18 +87,19 @@ namespace AutoDI
         /// <returns><paramref name="collection"/></returns>
         /// <exception cref="ArgumentException">
         /// Undefined enum value in <paramref name="collection"/> or
-        /// <paramref name="type"/> doen't bears the <see cref="AutoDIAttribute"/> attribute
+        /// <paramref name="type"/> doen't bears the <see cref="AutoDIRegisterAttribute"/> attribute
         /// </exception>
         /// <exception cref="InvalidOperationException">
         /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
         public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
         {
-            var attr = type.GetCustomAttribute<AutoDIAttribute>();
+            var attr = type.GetCustomAttribute<AutoDIRegisterAttribute>();
             if (attr == null)
             {
-                throw new ArgumentException($"Type {type} doesn't bears {nameof(AutoDIAttribute)} attribute");
+                throw new ArgumentException($"Type {type} doesn't bears {nameof(AutoDIRegisterAttribute)} attribute");
             }
+            Debug.Print($"AutoDI: registration type of {type} is {attr.RegistrationType}");
             switch (attr.RegistrationType)
             {
                 case AutoDIType.Singleton:
@@ -122,6 +133,7 @@ namespace AutoDI
         /// <returns><paramref name="collection"/></returns>
         private static IServiceCollection Register(Func<IServiceCollection, Type, Type, IServiceCollection> registerFunction, IServiceCollection collection, Type? interfaceType, Type implementationType)
         {
+            Debug.Print($"AutoDI: Registering {implementationType} in the service collection");
             return registerFunction(collection, interfaceType ?? implementationType, implementationType);
         }
     }

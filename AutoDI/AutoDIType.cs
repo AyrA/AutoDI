@@ -7,7 +7,7 @@
     {
         /// <summary>
         /// No automatic registration.
-        /// Same behavior as if <see cref="AutoDIAttribute"/> was not specified at all.
+        /// Same behavior as if <see cref="AutoDIRegisterAttribute"/> was not specified at all.
         /// </summary>
         None,
         /// <summary>
