@@ -28,16 +28,16 @@ namespace AutoDI
         /// Scans the specified assembly for all types and injects those marked with
         /// <see cref="AutoDIAttribute"/>
         /// </summary>
-        /// <param name="a">Assembly to scan for types</param>
+        /// <param name="assembly">Assembly to scan for types</param>
         /// <param name="collection">Service collection</param>
         /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
         /// <exception cref="InvalidOperationException">
         /// a type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
-        public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly a, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
         {
-            foreach (var t in a.GetTypes())
+            foreach (var t in assembly.GetTypes())
             {
                 if (t.IsClass)
                 {
@@ -54,38 +54,38 @@ namespace AutoDI
         /// Registers the specified type for dependency injection
         /// </summary>
         /// <param name="collection">Service collection</param>
-        /// <param name="t">Type to register</param>
+        /// <param name="type">Type to register</param>
         /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
         /// <exception cref="ArgumentException">
         /// Undefined enum value in <paramref name="collection"/> or
-        /// <paramref name="t"/> doen't bears the <see cref="AutoDIAttribute"/> attribute
+        /// <paramref name="type"/> doen't bears the <see cref="AutoDIAttribute"/> attribute
         /// </exception>
         /// <exception cref="InvalidOperationException">
         /// a type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
-        public static IServiceCollection AutoRegister(this IServiceCollection collection, Type t, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
         {
-            var attr = t.GetCustomAttribute<AutoDIAttribute>();
+            var attr = type.GetCustomAttribute<AutoDIAttribute>();
             if (attr == null)
             {
-                throw new ArgumentException($"Type {t} doesn't bears {nameof(AutoDIAttribute)} attribute");
+                throw new ArgumentException($"Type {type} doesn't bears {nameof(AutoDIAttribute)} attribute");
             }
             switch (attr.RegistrationType)
             {
                 case AutoDIType.Singleton:
-                    Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr.InterfaceType, t);
+                    Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr.InterfaceType, type);
                     break;
                 case AutoDIType.Transient:
-                    Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr.InterfaceType, t);
+                    Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr.InterfaceType, type);
                     break;
                 case AutoDIType.Scoped:
-                    Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr.InterfaceType, t);
+                    Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr.InterfaceType, type);
                     break;
                 case AutoDIType.None:
                     if (throwOnNoneType)
                     {
-                        throw new InvalidOperationException($"Type {t} has registration set to {nameof(AutoDIType.None)}, and {nameof(throwOnNoneType)} is enabled");
+                        throw new InvalidOperationException($"Type {type} has registration set to {nameof(AutoDIType.None)}, and {nameof(throwOnNoneType)} is enabled");
                     }
                     break;
                 default:
