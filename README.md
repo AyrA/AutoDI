@@ -73,3 +73,14 @@ class Something : ISomething {/*...*/}
 ```
 
 Note: AutoDI doesn't checks if the type actually implements the specified interface.
+
+## Debugging
+
+You can set `AutoDIExtensions.DebugLogging = true;` to make AutoDI dump loading information to a logger and debug listeners.
+This is disabled by default because it potentially generates a lot of messages.
+
+AutoDI doesn't uses the common "ILogger" logging system,
+because AutoDI is used during early startup where a logging system is likely not set up.
+You can set `AutoDIExtensions.Logger` to a custom logger that implements the TextWriter interface
+such as `File.CreateText("...")` if you want to dump messages to a file.
+By default it's assigned to the error stream of the console window.
