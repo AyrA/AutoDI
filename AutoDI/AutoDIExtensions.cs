@@ -10,6 +10,24 @@ namespace AutoDI
     public static class AutoDIExtensions
     {
         /// <summary>
+        /// Automatically registers all AutoDI types from all loaded assemblies
+        /// </summary>
+        /// <param name="collection">Service collection</param>
+        /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
+        /// <returns><paramref name="collection"/></returns>
+        /// <exception cref="InvalidOperationException">
+        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
+        /// </exception>
+        public static IServiceCollection AutoRegisterAllAssemblies(this IServiceCollection collection, bool throwOnNoneType = false)
+        {
+            foreach(var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                collection.AutoRegisterAll(asm, throwOnNoneType);
+            }
+            return collection;
+        }
+
+        /// <summary>
         /// Scans the calling assembly for all types and injects those marked with
         /// <see cref="AutoDIAttribute"/>
         /// </summary>
@@ -17,7 +35,7 @@ namespace AutoDI
         /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
         /// <exception cref="InvalidOperationException">
-        /// a type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
+        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
         public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, bool throwOnNoneType = false)
         {
@@ -33,7 +51,7 @@ namespace AutoDI
         /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
         /// <exception cref="InvalidOperationException">
-        /// a type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
+        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
         public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
         {
@@ -62,7 +80,7 @@ namespace AutoDI
         /// <paramref name="type"/> doen't bears the <see cref="AutoDIAttribute"/> attribute
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// a type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
+        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
         public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
         {
