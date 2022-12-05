@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -17,6 +17,7 @@
     <PackageTags>DI;Dependency Injection</PackageTags>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RootNamespace>AyrA.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <PackageReleaseNotes>Signed package</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
