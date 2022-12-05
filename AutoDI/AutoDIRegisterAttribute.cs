@@ -6,7 +6,7 @@ namespace AutoDI
     /// Registers a type for automatic dependency injection
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class AutoDIAttribute : Attribute
+    public class AutoDIRegisterAttribute : Attribute
     {
         /// <summary>
         /// Registers a type for automatic dependency injection
@@ -16,7 +16,7 @@ namespace AutoDI
         /// Implemented interface.
         /// If null, type is registered as itself</param>
         /// <exception cref="ArgumentException">Undefined enum value in <paramref name="registrationType"/></exception>
-        public AutoDIAttribute(AutoDIType registrationType, Type? interfaceType = null)
+        public AutoDIRegisterAttribute(AutoDIType registrationType, Type? interfaceType = null)
         {
             if (!Enum.IsDefined(registrationType))
             {
