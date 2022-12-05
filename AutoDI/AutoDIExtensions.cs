@@ -154,8 +154,10 @@ namespace AutoDI
         /// <returns><paramref name="collection"/></returns>
         private static IServiceCollection Register(Func<IServiceCollection, Type, Type, IServiceCollection> registerFunction, IServiceCollection collection, Type? interfaceType, Type implementationType)
         {
-            Log($"Registering {implementationType} in the service collection");
-            return registerFunction(collection, interfaceType ?? implementationType, implementationType);
+            Log($"Registering {implementationType} in the service collection as {interfaceType ?? implementationType}...");
+            var ret = registerFunction(collection, interfaceType ?? implementationType, implementationType);
+            Log($"Done");
+            return ret;
         }
 
         private static void Log(string message)
