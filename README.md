@@ -5,41 +5,48 @@ This allows you to have new types you create or add as libraries registered full
 
 ## Installation
 
-Install from nuget, then set up your application for automatic DI.
-Usually this means finding the code where services are registered
+Simply install from nuget or reference the DLL directly.
+
+## Quick Setup
+
+Find the code where services are registered
 (traditionally in `Startup.cs` but in more modern Projects also `Program.cs`)
-and inserting this line:
+and insert this line:
 
 ```C#
-builder.Services.AutoRegisterAll();
+builder.Services.AutoRegisterCurrentAssembly();
 ```
 
-The line can be repeated with arguments
-if you want to load additional types from different assemblies.
+See further below on how to set up a type for automated registration.
+
+## Advanced setup
+
+If you want to load additional types from different assemblies
+you can specify the assembly:
+
+```C#
+builder.Services.AutoRegisterFromAssembly(assembly);
+```
+
+Note: This will not load types recursively.
+It only checks the specified assembly but not referenced assemblies from it.
 
 You can also use `builder.Services.AutoRegisterAllAssemblies();`
 to have AutoDI scan all loaded assemblies.
+On large projects, this can take a few seconds,
+especially if the debug logger is active (see bottom of this document)
 
-### Custom arguments
+### Optional "throwOnNoneType" argument
 
-You can specify up to two arguments for the function,
-each one is optional, and each one can also be used on its own.
+All loader functions have an optional boolean argument named "throwOnNoneType".
+It defaults to "false".
 
-#### Assembly assembly
-
-This argument tells AutoDI from where to load automated types from.
-By default, it loads from the assembly that calls `AutoRegisterAll()`,
-which almost always means it loads them from your main project.
-You can specify the assembly if you want to load AutoDI types from a different assembly,
-such as a referenced DLL file for example.
-
-#### bool throwOnNoneType
-
-The AutoDIAttribute contains a value "None" which can be used to specify a type you do not want to load.
+The `AutoDIAttribute` contains a value "None" which can be used to specify a type you do not want to load.
 Reasons for this may vary, but among other things,
-you can use this value to load a type only in debug builds or release builds.
+you can use this value to load a type only in debug builds or release builds
+by making it conditional using `#if DEBUG` directives.
 
-Setting this parameter to true will make AutoDI throw an exception if the "None" value is encountered.
+Setting this optional parameter to "true" will make AutoDI throw an exception if the "None" value is encountered.
 This can be used to assert that there are no "None" types in a release build for example.
 
 ## Setting up a type for automatic registration
@@ -72,7 +79,7 @@ To achieve this, you can add the interface type to the attribute declaration:
 class Something : ISomething {/*...*/}
 ```
 
-Note: AutoDI doesn't checks if the type actually implements the specified interface.
+Note: AutoDI doesn't actually checks if the type implements the specified interface.
 
 ## Debugging
 
@@ -84,3 +91,5 @@ because AutoDI is used during early startup where a logging system is likely not
 You can set `AutoDIExtensions.Logger` to a custom logger that implements the TextWriter interface
 such as `File.CreateText("...")` if you want to dump messages to a file.
 By default it's assigned to the error stream of the console window.
+
+If you just want to output to debug listeners, set `Logger = TextWriter.Null;`
