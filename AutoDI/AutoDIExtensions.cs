@@ -2,6 +2,7 @@
 using System.Reflection;
 using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace AutoDI
 {
@@ -11,12 +12,16 @@ namespace AutoDI
     public static class AutoDIExtensions
     {
         /// <summary>
-        /// Gets or sets if messages should be written to console and attached debug listeners
+        /// Gets or sets if messages should be written to <see cref="Logger"/> and attached debug listeners
         /// </summary>
         /// <remarks>
         /// Unless necessary, this should be left disabled because it can slow down loading significantly.
         /// </remarks>
         public static bool DebugLogging { get; set; }
+        /// <summary>
+        /// Gets or sets the logger that outputs debug messages
+        /// </summary>
+        public static TextWriter Logger { get; set; } = Console.Error;
 
         /// <summary>
         /// Automatically registers all AutoDI types from all loaded assemblies
@@ -157,7 +162,7 @@ namespace AutoDI
         {
             if (DebugLogging)
             {
-                Console.Error.WriteLine($"AutoDI: {message}");
+                Logger.WriteLine($"AutoDI: {message}");
                 Debug.Print($"AutoDI: {message}");
             }
         }
