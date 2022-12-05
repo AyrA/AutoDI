@@ -40,7 +40,7 @@ namespace AutoDI
             Log("Loading all AutoDI types from all loaded assemblies");
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
-                collection.AutoRegisterAll(asm, throwOnNoneType);
+                collection.AutoRegisterFromAssembly(asm, throwOnNoneType);
             }
             return collection;
         }
@@ -55,9 +55,9 @@ namespace AutoDI
         /// <exception cref="InvalidOperationException">
         /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
-        public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterCurrentAssembly(this IServiceCollection collection, bool throwOnNoneType = false)
         {
-            return collection.AutoRegisterAll(Assembly.GetCallingAssembly(), throwOnNoneType);
+            return collection.AutoRegisterFromAssembly(Assembly.GetCallingAssembly(), throwOnNoneType);
         }
 
         /// <summary>
@@ -71,7 +71,7 @@ namespace AutoDI
         /// <exception cref="InvalidOperationException">
         /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
-        public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterFromAssembly(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
         {
             Log($"Scanning {assembly.FullName} for AutoDI types");
             foreach (var t in assembly.GetTypes())
