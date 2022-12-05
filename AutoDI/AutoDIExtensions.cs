@@ -11,6 +11,14 @@ namespace AutoDI
     public static class AutoDIExtensions
     {
         /// <summary>
+        /// Gets or sets if messages should be written to console and attached debug listeners
+        /// </summary>
+        /// <remarks>
+        /// Unless necessary, this should be left disabled because it can slow down loading significantly.
+        /// </remarks>
+        public static bool DebugLogging { get; set; }
+
+        /// <summary>
         /// Automatically registers all AutoDI types from all loaded assemblies
         /// </summary>
         /// <param name="collection">Service collection</param>
@@ -19,9 +27,13 @@ namespace AutoDI
         /// <exception cref="InvalidOperationException">
         /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
         /// </exception>
+        /// <remarks>
+        /// For big projects, this can take a very long time
+        /// </remarks>
         public static IServiceCollection AutoRegisterAllAssemblies(this IServiceCollection collection, bool throwOnNoneType = false)
         {
-            foreach(var asm in AppDomain.CurrentDomain.GetAssemblies())
+            Log("Loading all AutoDI types from all loaded assemblies");
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 collection.AutoRegisterAll(asm, throwOnNoneType);
             }
@@ -56,23 +68,27 @@ namespace AutoDI
         /// </exception>
         public static IServiceCollection AutoRegisterAll(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
         {
-            Debug.Print($"AutoDI: Scanning {assembly.FullName} for AutoDI types");
+            Log($"Scanning {assembly.FullName} for AutoDI types");
             foreach (var t in assembly.GetTypes())
             {
                 if (t.IsClass)
                 {
-                    if (t.GetCustomAttribute<AutoDIRegisterAttribute>() != null)
+                    if (t.GetConstructors().Length == 0)
+                    {
+                        Log($"Skipping {t}: Has no constructors");
+                    }
+                    else if (t.GetCustomAttribute<AutoDIRegisterAttribute>() != null)
                     {
                         collection.AutoRegister(t, throwOnNoneType);
                     }
                     else
                     {
-                        Debug.Print($"AutoDI: Skipping {t}: Has no {nameof(AutoDIRegisterAttribute)}");
+                        Log($"Skipping {t}: Has no {nameof(AutoDIRegisterAttribute)}");
                     }
                 }
                 else
                 {
-                    Debug.Print($"AutoDI: Skipping {t}: Not a class");
+                    Log($"Skipping {t}: Not a class");
                 }
             }
             return collection;
@@ -99,7 +115,7 @@ namespace AutoDI
             {
                 throw new ArgumentException($"Type {type} doesn't bears {nameof(AutoDIRegisterAttribute)} attribute");
             }
-            Debug.Print($"AutoDI: registration type of {type} is {attr.RegistrationType}");
+            Log($"registration type of {type} is {attr.RegistrationType}");
             switch (attr.RegistrationType)
             {
                 case AutoDIType.Singleton:
@@ -133,8 +149,17 @@ namespace AutoDI
         /// <returns><paramref name="collection"/></returns>
         private static IServiceCollection Register(Func<IServiceCollection, Type, Type, IServiceCollection> registerFunction, IServiceCollection collection, Type? interfaceType, Type implementationType)
         {
-            Debug.Print($"AutoDI: Registering {implementationType} in the service collection");
+            Log($"Registering {implementationType} in the service collection");
             return registerFunction(collection, interfaceType ?? implementationType, implementationType);
+        }
+
+        private static void Log(string message)
+        {
+            if (DebugLogging)
+            {
+                Console.Error.WriteLine($"AutoDI: {message}");
+                Debug.Print($"AutoDI: {message}");
+            }
         }
     }
 }
