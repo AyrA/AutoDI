@@ -17,7 +17,7 @@
     <PackageTags>DI;Dependency Injection</PackageTags>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RootNamespace>AyrA.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
-    <PackageReleaseNotes>Signed package</PackageReleaseNotes>
+    <PackageReleaseNotes>You can now apply the injection attribute multiple times</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
