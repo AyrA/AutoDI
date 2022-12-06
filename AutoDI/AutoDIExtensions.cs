@@ -3,6 +3,7 @@ using System.Reflection;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace AyrA.AutoDI
 {
@@ -115,31 +116,34 @@ namespace AyrA.AutoDI
         /// </exception>
         public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
         {
-            var attr = type.GetCustomAttribute<AutoDIRegisterAttribute>();
-            if (attr == null)
+            var attrList = type.GetCustomAttributes<AutoDIRegisterAttribute>().ToList();
+            if (attrList == null || attrList.Count == 0)
             {
                 throw new ArgumentException($"Type {type} doesn't bears {nameof(AutoDIRegisterAttribute)} attribute");
             }
-            Log($"registration type of {type} is {attr.RegistrationType}");
-            switch (attr.RegistrationType)
+            foreach (var attr in attrList)
             {
-                case AutoDIType.Singleton:
-                    Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr.InterfaceType, type);
-                    break;
-                case AutoDIType.Transient:
-                    Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr.InterfaceType, type);
-                    break;
-                case AutoDIType.Scoped:
-                    Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr.InterfaceType, type);
-                    break;
-                case AutoDIType.None:
-                    if (throwOnNoneType)
-                    {
-                        throw new InvalidOperationException($"Type {type} has registration set to {nameof(AutoDIType.None)}, and {nameof(throwOnNoneType)} is enabled");
-                    }
-                    break;
-                default:
-                    throw new ArgumentException($"{attr.RegistrationType} is not a valid registration type");
+                Log($"registration type of {type} is {attr.RegistrationType}");
+                switch (attr.RegistrationType)
+                {
+                    case AutoDIType.Singleton:
+                        Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr.InterfaceType, type);
+                        break;
+                    case AutoDIType.Transient:
+                        Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr.InterfaceType, type);
+                        break;
+                    case AutoDIType.Scoped:
+                        Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr.InterfaceType, type);
+                        break;
+                    case AutoDIType.None:
+                        if (throwOnNoneType)
+                        {
+                            throw new InvalidOperationException($"Type {type} has registration set to {nameof(AutoDIType.None)}, and {nameof(throwOnNoneType)} is enabled");
+                        }
+                        break;
+                    default:
+                        throw new ArgumentException($"{attr.RegistrationType} is not a valid registration type");
+                }
             }
             return collection;
         }

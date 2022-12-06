@@ -81,6 +81,11 @@ class Something : ISomething {/*...*/}
 
 Note: AutoDI doesn't actually checks if the type implements the specified interface.
 
+### Multiple registrations
+
+You can apply `AutoDIRegisterAttribute` multiple times to the same type to register it multiple times.
+This permits you to register a given type with multiple interface types for example.
+
 ## Debugging
 
 You can set `AutoDIExtensions.DebugLogging = true;` to make AutoDI dump loading information to a logger and debug listeners.
