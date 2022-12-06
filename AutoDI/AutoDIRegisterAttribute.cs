@@ -5,7 +5,7 @@ namespace AyrA.AutoDI
     /// <summary>
     /// Registers a type for automatic dependency injection
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class AutoDIRegisterAttribute : Attribute
     {
         /// <summary>

@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace AyrA.AutoDI
 {
@@ -19,10 +20,21 @@ namespace AyrA.AutoDI
         /// Unless necessary, this should be left disabled because it can slow down loading significantly.
         /// </remarks>
         public static bool DebugLogging { get; set; }
+
         /// <summary>
         /// Gets or sets the logger that outputs debug messages
         /// </summary>
         public static TextWriter Logger { get; set; } = Console.Error;
+
+        /// <summary>
+        /// Gets a list of excluded names.
+        /// Any assembly (not type) starting with a prefix from this list will be skipped
+        /// </summary>
+        /// <remarks>
+        /// This is case sensitive and only has an effect on <see cref="AutoRegisterAllAssemblies"/>.
+        /// The default is to exclude libraries starting with "System." and "Microsoft." as well as "AyrA.AutoDI" itself
+        /// </remarks>
+        public static List<string> NameExclusions { get; } = new() { "AyrA.AutoDI", "Microsoft.", "System." };
 
         /// <summary>
         /// Automatically registers all AutoDI types from all loaded assemblies
@@ -38,10 +50,48 @@ namespace AyrA.AutoDI
         /// </remarks>
         public static IServiceCollection AutoRegisterAllAssemblies(this IServiceCollection collection, bool throwOnNoneType = false)
         {
-            Log("Loading all AutoDI types from all loaded assemblies");
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            Log("Loading all AutoDI types from all referenced assemblies");
+
+            //Any assembly in this list will neither be processed nor loaded
+            List<string> loaded = new();
+
+            //Assemblies in this list will be processed unless they're in the loaded name list
+            Stack<Assembly> assemblies = new(AppDomain.CurrentDomain.GetAssemblies());
+            while (assemblies.Count > 0)
             {
-                collection.AutoRegisterFromAssembly(asm, throwOnNoneType);
+                Assembly asm = assemblies.Pop();
+                var asmName = asm.GetName();
+                if(asmName?.Name == null)
+                {
+                    Log($"Unnamed: {asm}");
+                    continue;
+                }
+                if (IsExcludedAssembly(asmName))
+                {
+                    Log($"Excluded: {asmName}");
+                    continue;
+                }
+                if (!loaded.Contains(asmName.Name))
+                {
+                    loaded.Add(asmName.FullName);
+                    collection.AutoRegisterFromAssembly(asm, throwOnNoneType);
+                    //Recursively process referenced assemblies
+                    foreach (var name in asm.GetReferencedAssemblies())
+                    {
+                        //Don't try to load assemblies we've already processed or are excluded
+                        if (!IsExcludedAssembly(name))
+                        {
+                            if (!loaded.Contains(name.FullName))
+                            {
+                                assemblies.Push(AppDomain.CurrentDomain.Load(name));
+                            }
+                        }
+                        else
+                        {
+                            Log($"Excluded: {name}");
+                        }
+                    }
+                }
             }
             return collection;
         }
@@ -83,7 +133,7 @@ namespace AyrA.AutoDI
                     {
                         Log($"Skipping {t}: Has no constructors");
                     }
-                    else if (t.GetCustomAttribute<AutoDIRegisterAttribute>() != null)
+                    else if (t.GetCustomAttributes<AutoDIRegisterAttribute>().Any())
                     {
                         collection.AutoRegister(t, throwOnNoneType);
                     }
@@ -164,6 +214,10 @@ namespace AyrA.AutoDI
             return ret;
         }
 
+        /// <summary>
+        /// Writes a log line
+        /// </summary>
+        /// <param name="message">Log message</param>
         private static void Log(string message)
         {
             if (DebugLogging)
@@ -171,6 +225,20 @@ namespace AyrA.AutoDI
                 Logger.WriteLine($"AutoDI: {message}");
                 Debug.Print($"AutoDI: {message}");
             }
+        }
+
+        /// <summary>
+        /// Gets if the assembly name is excluded from scanning
+        /// </summary>
+        /// <param name="name">Assembly name</param>
+        /// <returns>true, if part of the exclusion list</returns>
+        private static bool IsExcludedAssembly(AssemblyName name)
+        {
+            if (NameExclusions.Count == 0 || name.Name == null)
+            {
+                return false;
+            }
+            return NameExclusions.Any(m => name.Name.StartsWith(m));
         }
     }
 }
