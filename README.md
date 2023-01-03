@@ -118,6 +118,43 @@ class Something : ISomething {/*...*/}
 The registration type can also vary between attributes.
 The order of the attributes is not relevant.
 
+### Custom registration function
+
+The AutoDI attribute takes a 3rd argument of type `string`.
+This is the name of a custom registration function you want to be called instead of the default logic being used.
+
+The function must be declared in the type you use the AutoDI attribute on, and it must be static.
+You may declare it as non-public to avoid manual calls to the function.
+
+Example:
+
+```C#
+[AutoDIRegister(RegistrationType.Transient, null, nameof(Register))] //Register using custom function
+class Something
+{
+	private static void Register(IServiceCollection services, AutoDIRegisterAttribute attr)
+	{
+		//Custom logic goes here
+	}
+}
+```
+
+Your registration function must at least take the IServiceCollection argument,
+and may optionally take the AutoDIRegisterAttribute argument.
+When AutoDI searches for your funtion, it prefers signatures with both arguments first,
+and it prefers public over non-public methods.
+
+**Note**: AutoDI does in no way enforce correct behavior of the registration function
+in regards to the arguments you supplied to the attribute.
+Example: You're free to specify `RegistrationType.Transient` but register the service as scoped instead,
+or perform no registration at all.
+
+If multiple attributes with the same registration function are supplied,
+the function will be individually called for every attribute that references it.
+
+*I'm aware that using a string argument for the function name is ugly,
+but it's a limitation of the CLR at the moment (see CS0181) that you cannot use generic types or delegates.*
+
 ## Configuration
 
 The `AutoDIExtensions` type has a few static properties you can use to configure it.

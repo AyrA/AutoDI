@@ -61,7 +61,7 @@ namespace AyrA.AutoDI
             {
                 Assembly asm = assemblies.Pop();
                 var asmName = asm.GetName();
-                if(asmName?.Name == null)
+                if (asmName?.Name == null)
                 {
                     Log($"Unnamed: {asm}");
                     continue;
@@ -177,13 +177,13 @@ namespace AyrA.AutoDI
                 switch (attr.RegistrationType)
                 {
                     case AutoDIType.Singleton:
-                        Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr.InterfaceType, type);
+                        Register(ServiceCollectionServiceExtensions.AddSingleton, collection, attr, type);
                         break;
                     case AutoDIType.Transient:
-                        Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr.InterfaceType, type);
+                        Register(ServiceCollectionServiceExtensions.AddTransient, collection, attr, type);
                         break;
                     case AutoDIType.Scoped:
-                        Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr.InterfaceType, type);
+                        Register(ServiceCollectionServiceExtensions.AddScoped, collection, attr, type);
                         break;
                     case AutoDIType.None:
                         if (throwOnNoneType)
@@ -203,15 +203,49 @@ namespace AyrA.AutoDI
         /// </summary>
         /// <param name="registerFunction">registration function</param>
         /// <param name="collection">Service collection</param>
-        /// <param name="interfaceType">Interface type. If null, uses <paramref name="implementationType"/></param>
-        /// <param name="implementationType">Type that implements <paramref name="interfaceType"/></param>
+        /// <param name="attr">AutoDI Attribute for the current registration instance</param>
+        /// <param name="implementationType">Implementation type to be registered</param>
         /// <returns><paramref name="collection"/></returns>
-        private static IServiceCollection Register(Func<IServiceCollection, Type, Type, IServiceCollection> registerFunction, IServiceCollection collection, Type? interfaceType, Type implementationType)
+        private static IServiceCollection Register(Func<IServiceCollection, Type, Type, IServiceCollection> registerFunction,
+                                                   IServiceCollection collection,
+                                                   AutoDIRegisterAttribute attr,
+                                                   Type implementationType)
         {
-            Log($"Registering {implementationType} in the service collection as {interfaceType ?? implementationType}...");
-            var ret = registerFunction(collection, interfaceType ?? implementationType, implementationType);
-            Log($"Done");
-            return ret;
+            if (attr.RegisterFunction != null)
+            {
+                Log($"Registering {implementationType} in the service collection as {attr.InterfaceType ?? implementationType} using custom registration implementation in '{attr.RegisterFunction}'...");
+                var func =
+                    //Try the two argument version first
+                    implementationType.GetMethod(attr.RegisterFunction, BindingFlags.Static | BindingFlags.Public, new Type[] { typeof(IServiceCollection), typeof(AutoDIRegisterAttribute) }) ??
+                    implementationType.GetMethod(attr.RegisterFunction, BindingFlags.Static | BindingFlags.NonPublic, new Type[] { typeof(IServiceCollection), typeof(AutoDIRegisterAttribute) }) ??
+                    //Try with only a single argument last
+                    implementationType.GetMethod(attr.RegisterFunction, BindingFlags.Static | BindingFlags.Public, new Type[] { typeof(IServiceCollection) }) ??
+                    implementationType.GetMethod(attr.RegisterFunction, BindingFlags.Static | BindingFlags.NonPublic, new Type[] { typeof(IServiceCollection) });
+                if (func == null)
+                {
+                    throw new TypeRegistrationException($"The type '{implementationType}' has no static method '{attr.RegisterFunction}' but a custom function was specified in the attribute");
+                }
+                var funcParams = func.GetParameters().Length == 2 ?
+                    new object[] { collection, attr } :
+                    new object[] { collection };
+                try
+                {
+                    func.Invoke(null, funcParams);
+                }
+                catch (Exception ex)
+                {
+                    throw new TypeRegistrationException($"Custom registration function '{attr.RegisterFunction}' in type '{implementationType}' threw an exception when called. See inner exception for details.", ex);
+                }
+                Log("Done");
+                return collection;
+            }
+            else
+            {
+                Log($"Registering {implementationType} in the service collection as {attr.InterfaceType ?? implementationType} using default registration implementation...");
+                var ret = registerFunction(collection, attr.InterfaceType ?? implementationType, implementationType);
+                Log("Done");
+                return ret;
+            }
         }
 
         /// <summary>
