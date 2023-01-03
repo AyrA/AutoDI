@@ -3,6 +3,7 @@
 		<Product>AyrA.AutoDI</Product>
 		<Authors>Kevin Gut</Authors>
 		<Copyright>Copyright © 2022 Kevin Gut</Copyright>
-		<Version>2.0.0</Version>
+		<Version>2.1.0</Version>
+		<PackageReleaseNotes>Implemented support for custom registration functions.</PackageReleaseNotes>
 	</PropertyGroup>
 </Project>

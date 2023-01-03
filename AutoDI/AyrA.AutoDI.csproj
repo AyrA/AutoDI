@@ -17,7 +17,6 @@
     <PackageTags>DI;Dependency Injection</PackageTags>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RootNamespace>AyrA.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
-    <PackageReleaseNotes>Types in Assemblies not yet loaded can now be searched too.</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
