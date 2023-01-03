@@ -120,13 +120,13 @@ The order of the attributes is not relevant.
 
 ### Custom registration function
 
-The AutoDI attribute takes a 3rd argument of type `string`.
+The AutoDIRegister attribute takes a 3rd argument of type `string`.
 This is the name of a custom registration function you want to be called instead of the default logic being used.
 
-The function must be declared in the type you use the AutoDI attribute on, and it must be static.
+The function must be declared in the type you use the AutoDIRegister attribute on, and it must be static.
 You may declare it as non-public to avoid manual calls to the function.
 
-Example:
+**Example**:
 
 ```C#
 [AutoDIRegister(RegistrationType.Transient, null, nameof(Register))] //Register using custom function
@@ -141,7 +141,7 @@ class Something
 
 Your registration function must at least take the IServiceCollection argument,
 and may optionally take the AutoDIRegisterAttribute argument.
-When AutoDI searches for your funtion, it prefers signatures with both arguments first,
+When AutoDI searches for your function, it prefers signatures with both arguments first,
 and it prefers public over non-public methods.
 
 **Note**: AutoDI does in no way enforce correct behavior of the registration function
