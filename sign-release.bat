@@ -2,7 +2,7 @@
 SETLOCAL
 PUSHD "%~dp0"
 
-CD AutoDI\bin\Release\net6.0\publish
+CD AutoDI\bin\Release\net8.0\publish
 
 REM find latest package file name
 FOR %%F IN (*.nupkg) DO (
