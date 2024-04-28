@@ -160,6 +160,11 @@ but it's a limitation of the CLR at the moment (see CS0181) that you cannot use 
 Using the AutoDIRegister attribute without any arguments
 has the same effect as using it with a "RegisterDI" string argument.
 
+### Hosted Services
+
+Apply the `AutoDIHostedServiceAttribute` attribute to a class to have it loaded as a hosted service.
+For this to work, the class must implement the `Microsoft.Extensions.Hosting.IHostedService` interface.
+
 ## Configuration
 
 The `AutoDIExtensions` type has a few static properties you can use to configure it.

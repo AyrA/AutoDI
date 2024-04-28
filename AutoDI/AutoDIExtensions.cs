@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,17 @@ namespace AyrA.AutoDI
     /// </summary>
     public static class AutoDIExtensions
     {
+        /// <summary>
+        /// Name of the method that is used for the registration of hosted services
+        /// </summary>
+        private const string hostingMethodName = nameof(ServiceCollectionHostedServiceExtensions.AddHostedService);
+        /// <summary>
+        /// Public static methods
+        /// </summary>
         private const BindingFlags FlagsPublic = BindingFlags.Static | BindingFlags.Public;
+        /// <summary>
+        /// Private static methods
+        /// </summary>
         private const BindingFlags FlagsPrivate = BindingFlags.Static | BindingFlags.NonPublic;
 
         private static readonly Type[] RegisterArgs1 =
@@ -24,6 +35,7 @@ namespace AyrA.AutoDI
         [
             typeof(IServiceCollection), typeof(AutoDIRegisterAttribute)
         ];
+        private static readonly MethodInfo hostingRegistrationMethod;
 
         /// <summary>
         /// Gets or sets if messages should be written to <see cref="Logger"/> and attached debug listeners
@@ -57,6 +69,12 @@ namespace AyrA.AutoDI
             "Microsoft.",
             "System."
         ];
+
+        static AutoDIExtensions()
+        {
+            hostingRegistrationMethod = typeof(ServiceCollectionHostedServiceExtensions).GetMethod(hostingMethodName, FlagsPublic, [typeof(IServiceCollection)])
+                ?? throw new InvalidOperationException($"Unable to obtain generic service registration method. Does '{hostingMethodName}' no longer exist?");
+        }
 
         /// <summary>
         /// Automatically registers all AutoDI types from all loaded assemblies
@@ -155,14 +173,16 @@ namespace AyrA.AutoDI
                     if (t.GetConstructors().Length == 0)
                     {
                         Log($"Skipping {t}: Has no constructors");
+                        continue;
                     }
-                    else if (t.GetCustomAttributes<AutoDIRegisterAttribute>().Any())
+                    if (t.GetCustomAttributes<AutoDIRegisterAttribute>().Any() ||
+                        t.GetCustomAttributes<AutoDIHostedServiceAttribute>().Any())
                     {
                         collection.AutoRegister(t, throwOnNoneType);
                     }
                     else
                     {
-                        Log($"Skipping {t}: Has no {nameof(AutoDIRegisterAttribute)}");
+                        Log($"Skipping {t}: Has neither {nameof(AutoDIRegisterAttribute)} nor {nameof(AutoDIHostedServiceAttribute)}");
                     }
                 }
                 else
@@ -190,12 +210,18 @@ namespace AyrA.AutoDI
         /// </exception>
         public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
         {
-            var attrList = type.GetCustomAttributes<AutoDIRegisterAttribute>().ToList();
-            if (attrList == null || attrList.Count == 0)
+            var serviceAttrList = type.GetCustomAttributes<AutoDIRegisterAttribute>().ToList();
+            var hostAttrList = type.GetCustomAttributes<AutoDIHostedServiceAttribute>().ToList();
+            if (serviceAttrList.Count + hostAttrList.Count == 0)
             {
-                throw new ArgumentException($"Type {type.FullName} doesn't bears {nameof(AutoDIRegisterAttribute)} attribute");
+                throw new ArgumentException($"Type {type.FullName} doesn't bears {nameof(AutoDIRegisterAttribute)} or {nameof(AutoDIHostedServiceAttribute)} attribute");
             }
-            foreach (var attr in attrList)
+            if (hostAttrList.Count > 1)
+            {
+                throw new ArgumentException($"Type {type.FullName} has multiple {nameof(AutoDIHostedServiceAttribute)} attributes. This is not allowed");
+            }
+            //Service registration
+            foreach (var attr in serviceAttrList)
             {
                 Log($"registration type of {type.FullName} is {attr.RegistrationType}");
                 switch (attr.RegistrationType)
@@ -217,6 +243,11 @@ namespace AyrA.AutoDI
                     default:
                         throw new ArgumentException($"{attr.RegistrationType} is not a valid registration type");
                 }
+            }
+            //Hosting registration
+            if (hostAttrList.Count > 0)
+            {
+                RegisterHost(collection, type);
             }
             return collection;
         }
@@ -290,6 +321,16 @@ namespace AyrA.AutoDI
                 throw new TypeRegistrationException($"Custom registration function '{attr.RegisterFunction}' in type '{implementationType.FullName}' threw an exception when called. See inner exception for details.", ex);
             }
             Log("Done");
+            return collection;
+        }
+
+        private static IServiceCollection RegisterHost(IServiceCollection collection, Type hostType)
+        {
+            if (!hostType.IsAssignableTo(typeof(IHostedService)))
+            {
+                throw new TypeRegistrationException($"The type '{hostType.FullName}' does not implement '{typeof(IHostedService).FullName}'. This interface must be implemented to use {nameof(AutoDIHostedServiceAttribute)}");
+            }
+            hostingRegistrationMethod.MakeGenericMethod(hostType).Invoke(null, [collection]);
             return collection;
         }
 
