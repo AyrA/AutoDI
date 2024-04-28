@@ -21,6 +21,10 @@
         /// <summary>
         /// Registers the type as a scoped service
         /// </summary>
-        Scoped
+        Scoped,
+        /// <summary>
+        /// Uses the custom registration function to register the type
+        /// </summary>
+        Custom
     }
 }

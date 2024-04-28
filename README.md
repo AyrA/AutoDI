@@ -1,8 +1,7 @@
 # AutoDI
 
 Performs automatic dependency injection registration.
-This allows you to have new types you create or add as libraries registered fully automatically
-without having to edit your main project file every time.
+This allows you to have new types you create or add as libraries registered fully automatically without having to edit your main project file every time.
 
 ## Installation
 
@@ -91,6 +90,8 @@ Replace `RegistrationType.Transient` with the appropriate type:
 The values correspond to the appropriate function you would use to manually register types in your project startup routine.
 "None" is special and essentially behaves as if the attribute was not there at all.
 
+The enumeration also has a `Custom` value, which cannot be used in this case.
+
 ### Interfaces
 
 Under some circumstances you do not want to register an AutoDI type under its own type,
@@ -120,7 +121,7 @@ The order of the attributes is not relevant.
 
 ### Custom registration function
 
-The AutoDIRegister attribute takes a 3rd argument of type `string`.
+The AutoDIRegister attribute takes a different constructor with a single string argument.
 This is the name of a custom registration function you want to be called instead of the default logic being used.
 
 The function must be declared in the type you use the AutoDIRegister attribute on, and it must be static.
@@ -129,7 +130,7 @@ You may declare it as non-public to avoid manual calls to the function.
 **Example**:
 
 ```C#
-[AutoDIRegister(RegistrationType.Transient, null, nameof(Register))] //Register using custom function
+[AutoDIRegister(nameof(Register))] //Register using custom function
 class Something
 {
 	private static void Register(IServiceCollection services, AutoDIRegisterAttribute attr)
@@ -141,19 +142,23 @@ class Something
 
 Your registration function must at least take the IServiceCollection argument,
 and may optionally take the AutoDIRegisterAttribute argument.
+The return type of the function is not relevant.
 When AutoDI searches for your function, it prefers signatures with both arguments first,
 and it prefers public over non-public methods.
 
-**Note**: AutoDI does in no way enforce correct behavior of the registration function
-in regards to the arguments you supplied to the attribute.
-Example: You're free to specify `RegistrationType.Transient` but register the service as scoped instead,
-or perform no registration at all.
+**Note**: AutoDI does in no way enforce the registration function to actually register its contained type.
+You may register as many types as you want, or perform no registration at all.
 
 If multiple attributes with the same registration function are supplied,
 the function will be individually called for every attribute that references it.
 
 *I'm aware that using a string argument for the function name is ugly,
-but it's a limitation of the CLR at the moment (see CS0181) that you cannot use generic types or delegates.*
+but it's a limitation of the CLR at the moment (see CS0181) that you cannot use generic types or delegates. You can use `nameof(...)` to avoid a hardcoded string*
+
+### Default Registration
+
+Using the AutoDIRegister attribute without any arguments
+has the same effect as using it with a "RegisterDI" string argument.
 
 ## Configuration
 
@@ -169,6 +174,7 @@ This is disabled by default because it potentially generates a lot of messages.
 
 Note: Output to debug listener is not working in the nuget package or the DLL from the GitHub releses section.
 Those are compiled in release mode, which removes calls to the debug writer.
+Using the `Logger` property still works.
 
 ### TextWriter: Logger
 
