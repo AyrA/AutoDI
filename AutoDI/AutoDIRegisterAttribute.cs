@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AyrA.AyrA.AutoDI;
+using System;
 
 namespace AyrA.AutoDI
 {
@@ -6,7 +7,7 @@ namespace AyrA.AutoDI
     /// Registers a type for automatic dependency injection
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class AutoDIRegisterAttribute : Attribute
+    public class AutoDIRegisterAttribute : AutoDIFilterAttribute
     {
         /// <summary>
         /// Registers a type for automatic dependency injection

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using AyrA.AyrA.AutoDI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,8 @@ namespace AyrA.AutoDI
         ];
         private static readonly MethodInfo hostingRegistrationMethod;
 
+        private static string[] currentFilters = [];
+
         /// <summary>
         /// Gets or sets if messages should be written to <see cref="Logger"/> and attached debug listeners
         /// </summary>
@@ -70,6 +73,14 @@ namespace AyrA.AutoDI
             "System."
         ];
 
+        /// <summary>
+        /// Gets a list of filters.
+        /// AutoDI will only add types which have an empty filter list,
+        /// or where at least one item of the two lists overlap
+        /// </summary>
+        /// <remarks>If this is empty, all attributes with any filter will be disabled</remarks>
+        public static List<string> FilterList { get; } = [];
+
         static AutoDIExtensions()
         {
             hostingRegistrationMethod = typeof(ServiceCollectionHostedServiceExtensions).GetMethod(hostingMethodName, FlagsPublic, [typeof(IServiceCollection)])
@@ -80,17 +91,14 @@ namespace AyrA.AutoDI
         /// Automatically registers all AutoDI types from all loaded assemblies
         /// </summary>
         /// <param name="collection">Service collection</param>
-        /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
-        /// <exception cref="InvalidOperationException">
-        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
-        /// </exception>
         /// <remarks>
         /// For big projects, this can take a very long time
         /// </remarks>
-        public static IServiceCollection AutoRegisterAllAssemblies(this IServiceCollection collection, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterAllAssemblies(this IServiceCollection collection)
         {
             Log("Loading all AutoDI types from all referenced assemblies");
+            PrepareFilters();
 
             //Any assembly in this list have already been processed
             //and will neither be processed nor loaded
@@ -115,7 +123,7 @@ namespace AyrA.AutoDI
                 if (!loaded.Contains(asmName.Name))
                 {
                     loaded.Add(asmName.FullName);
-                    collection.AutoRegisterFromAssembly(asm, throwOnNoneType);
+                    collection.AutoRegisterFromAssembly(asm);
                     //Recursively process referenced assemblies
                     foreach (var name in asm.GetReferencedAssemblies())
                     {
@@ -142,14 +150,10 @@ namespace AyrA.AutoDI
         /// <see cref="AutoDIRegisterAttribute"/>
         /// </summary>
         /// <param name="collection">Service collection</param>
-        /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
-        /// <exception cref="InvalidOperationException">
-        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
-        /// </exception>
-        public static IServiceCollection AutoRegisterCurrentAssembly(this IServiceCollection collection, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterCurrentAssembly(this IServiceCollection collection)
         {
-            return collection.AutoRegisterFromAssembly(Assembly.GetCallingAssembly(), throwOnNoneType);
+            return collection.AutoRegisterFromAssembly(Assembly.GetCallingAssembly());
         }
 
         /// <summary>
@@ -158,27 +162,20 @@ namespace AyrA.AutoDI
         /// </summary>
         /// <param name="assembly">Assembly to scan for types</param>
         /// <param name="collection">Service collection</param>
-        /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
-        /// <exception cref="InvalidOperationException">
-        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
-        /// </exception>
-        public static IServiceCollection AutoRegisterFromAssembly(this IServiceCollection collection, Assembly assembly, bool throwOnNoneType = false)
+        public static IServiceCollection AutoRegisterFromAssembly(this IServiceCollection collection, Assembly assembly)
         {
             Log($"Scanning {assembly.FullName} for AutoDI types");
+            PrepareFilters();
             foreach (var t in assembly.GetTypes())
             {
                 if (t.IsClass)
                 {
-                    if (t.GetConstructors().Length == 0)
-                    {
-                        Log($"Skipping {t}: Has no constructors");
-                        continue;
-                    }
                     if (t.GetCustomAttributes<AutoDIRegisterAttribute>().Any() ||
-                        t.GetCustomAttributes<AutoDIHostedServiceAttribute>().Any())
+                        t.GetCustomAttributes<AutoDIHostedServiceAttribute>().Any() ||
+                        t.GetCustomAttributes<AutoDIHostedSingletonServiceAttribute>().Any())
                     {
-                        collection.AutoRegister(t, throwOnNoneType);
+                        collection.AutoRegister(t);
                     }
                     else
                     {
@@ -198,27 +195,41 @@ namespace AyrA.AutoDI
         /// </summary>
         /// <param name="collection">Service collection</param>
         /// <param name="type">Type to register</param>
-        /// <param name="throwOnNoneType">Throw an exception if attempting to register a type with <see cref="AutoDIType.None"/></param>
         /// <returns><paramref name="collection"/></returns>
         /// <remarks>Consider using one of the methods that registers entire assemblies instead</remarks>
         /// <exception cref="ArgumentException">
-        /// Undefined enum value in <paramref name="collection"/> or
-        /// <paramref name="type"/> doen't bears the <see cref="AutoDIRegisterAttribute"/> attribute
+        /// <paramref name="type"/> has an invalid attribute combination
         /// </exception>
-        /// <exception cref="InvalidOperationException">
-        /// A type has <see cref="AutoDIType.None"/> set, and <paramref name="throwOnNoneType"/> was enabled
-        /// </exception>
-        public static IServiceCollection AutoRegister(this IServiceCollection collection, Type type, bool throwOnNoneType = false)
+        private static IServiceCollection AutoRegister(this IServiceCollection collection, Type type)
         {
-            var serviceAttrList = type.GetCustomAttributes<AutoDIRegisterAttribute>().ToList();
-            var hostAttrList = type.GetCustomAttributes<AutoDIHostedServiceAttribute>().ToList();
-            if (serviceAttrList.Count + hostAttrList.Count == 0)
+            var serviceAttrList = type
+                .GetCustomAttributes<AutoDIRegisterAttribute>()
+                .Where(Filter)
+                .ToList();
+            var hostAttrList = type
+                .GetCustomAttributes<AutoDIHostedServiceAttribute>()
+                .Where(Filter)
+                .ToList();
+            var combinedAttrList = type
+                .GetCustomAttributes<AutoDIHostedSingletonServiceAttribute>()
+                .Where(Filter)
+                .ToList();
+            if (serviceAttrList.Count + hostAttrList.Count + combinedAttrList.Count == 0)
             {
-                throw new ArgumentException($"Type {type.FullName} doesn't bears {nameof(AutoDIRegisterAttribute)} or {nameof(AutoDIHostedServiceAttribute)} attribute");
+                Log($"{type.FullName} is skipped due to the current filter settings");
+                return collection;
             }
             if (hostAttrList.Count > 1)
             {
                 throw new ArgumentException($"Type {type.FullName} has multiple {nameof(AutoDIHostedServiceAttribute)} attributes. This is not allowed");
+            }
+            if (combinedAttrList.Count > 1)
+            {
+                throw new ArgumentException($"Type {type.FullName} has multiple {nameof(AutoDIHostedSingletonServiceAttribute)} attributes. This is not allowed");
+            }
+            if (combinedAttrList.Count > 0 && hostAttrList.Count > 0)
+            {
+                throw new ArgumentException($"Type {type.FullName} has both {nameof(AutoDIHostedServiceAttribute)} and {nameof(AutoDIHostedSingletonServiceAttribute)} attributes. This is not allowed");
             }
             //Service registration
             foreach (var attr in serviceAttrList)
@@ -234,12 +245,6 @@ namespace AyrA.AutoDI
                     case AutoDIType.Custom:
                         RegisterCustom(collection, attr, type);
                         break;
-                    case AutoDIType.None:
-                        if (throwOnNoneType)
-                        {
-                            throw new InvalidOperationException($"Type {type.FullName} has registration set to {nameof(AutoDIType.None)}, and {nameof(throwOnNoneType)} is enabled");
-                        }
-                        break;
                     default:
                         throw new ArgumentException($"{attr.RegistrationType} is not a valid registration type");
                 }
@@ -248,6 +253,11 @@ namespace AyrA.AutoDI
             if (hostAttrList.Count > 0)
             {
                 RegisterHost(collection, type);
+            }
+            //Combined registration
+            if (combinedAttrList.Count > 0)
+            {
+                RegisterCombined(collection, type);
             }
             return collection;
         }
@@ -295,7 +305,7 @@ namespace AyrA.AutoDI
         /// <param name="collection">Service collection</param>
         /// <param name="attr">AutoDI attribute</param>
         /// <param name="implementationType">Implementation type</param>
-        /// <returns><paramref name="attr"/></returns>
+        /// <returns><paramref name="collection"/></returns>
         private static IServiceCollection RegisterCustom(IServiceCollection collection, AutoDIRegisterAttribute attr, Type implementationType)
         {
             if (attr.RegisterFunction == null)
@@ -324,6 +334,12 @@ namespace AyrA.AutoDI
             return collection;
         }
 
+        /// <summary>
+        /// Register a hosted service
+        /// </summary>
+        /// <param name="collection">Service collection</param>
+        /// <param name="hostType">Host service type</param>
+        /// <returns><paramref name="collection"/></returns>
         private static IServiceCollection RegisterHost(IServiceCollection collection, Type hostType)
         {
             if (!hostType.IsAssignableTo(typeof(IHostedService)))
@@ -331,6 +347,22 @@ namespace AyrA.AutoDI
                 throw new TypeRegistrationException($"The type '{hostType.FullName}' does not implement '{typeof(IHostedService).FullName}'. This interface must be implemented to use {nameof(AutoDIHostedServiceAttribute)}");
             }
             hostingRegistrationMethod.MakeGenericMethod(hostType).Invoke(null, [collection]);
+            return collection;
+        }
+
+        /// <summary>
+        /// Register a combined singleton and hosted service
+        /// </summary>
+        /// <param name="collection">Service collection</param>
+        /// <param name="hostType">Host service type</param>
+        /// <returns><paramref name="collection"/></returns>
+        private static IServiceCollection RegisterCombined(IServiceCollection collection, Type hostType)
+        {
+            if (!hostType.IsAssignableTo(typeof(IHostedService)))
+            {
+                throw new TypeRegistrationException($"The type '{hostType.FullName}' does not implement '{typeof(IHostedService).FullName}'. This interface must be implemented to use {nameof(AutoDIHostedSingletonServiceAttribute)}");
+            }
+            AutoDISingletonFactory.Register(collection, hostType);
             return collection;
         }
 
@@ -358,7 +390,17 @@ namespace AyrA.AutoDI
             {
                 return false;
             }
-            return NameExclusions.Any(m => name.Name.StartsWith(m));
+            return NameExclusions.Any(name.Name.StartsWith);
+        }
+
+        private static void PrepareFilters()
+        {
+            currentFilters = [.. FilterList.Select(m => m.Trim().ToLowerInvariant()).Distinct()];
+        }
+
+        private static bool Filter(AutoDIFilterAttribute attr)
+        {
+            return attr.IsFilterMatch([.. FilterList]);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using AyrA.AyrA.AutoDI;
+using Microsoft.Extensions.Hosting;
 using System;
 
 namespace AyrA.AutoDI
@@ -11,7 +12,7 @@ namespace AyrA.AutoDI
     /// <see cref="IHostedService"/>
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class AutoDIHostedServiceAttribute : Attribute
+    public class AutoDIHostedServiceAttribute : AutoDIFilterAttribute
     {
     }
 }

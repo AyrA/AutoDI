@@ -6,11 +6,6 @@
     public enum AutoDIType
     {
         /// <summary>
-        /// No automatic registration.
-        /// Same behavior as if <see cref="AutoDIRegisterAttribute"/> was not specified at all.
-        /// </summary>
-        None,
-        /// <summary>
         /// Registers the type as a singleton service
         /// </summary>
         Singleton,
