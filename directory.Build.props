@@ -3,10 +3,9 @@
 		<Product>AyrA.AutoDI</Product>
 		<Authors>Kevin Gut</Authors>
 		<Copyright>Copyright © 2022 Kevin Gut</Copyright>
-		<Version>3.0.0</Version>
+		<Version>4.0.0</Version>
 		<PackageReleaseNotes>
-			Update to .NET 8;
-			Streamlined attribute usage
+			Added AutoDIHostedSingletonServiceAttribute and filters
 		</PackageReleaseNotes>
 	</PropertyGroup>
 </Project>
